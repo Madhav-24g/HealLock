@@ -277,7 +277,10 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
   if (path === "/patient/biometrics/enroll" && method === "POST") {
     const patientId = s?.patient_id || 1;
     const p = db.patients.find((pt: any) => pt.id === patientId);
-    if (p) p.biometrics_registered = true;
+    if (p) {
+      p.biometrics_registered = true;
+      db.last_enrolled_patient_id = p.id;
+    }
     saveMockDB(db);
     return { status: "success", template_ref: `BIO-${(body.factor || "FACE").toUpperCase()}-VERIFIED` };
   }
@@ -422,12 +425,22 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
           throw new Error(`Biometric Face Not Registered: Patient ${p.name} (${p.health_id}) has not enrolled face biometrics in the database yet. Access Denied.`);
         }
       } else {
-        // Find enrolled patient in database
-        const enrolled = db.patients.filter((pt: any) => pt.biometrics_registered);
-        if (enrolled.length === 0) {
-          throw new Error("Biometric Face Not Registered: No registered patient with enrolled face biometrics found in database. Access Denied.");
+        // Find the patient who enrolled biometrics or active registered user
+        if (db.last_enrolled_patient_id) {
+          p = db.patients.find((pt: any) => pt.id === db.last_enrolled_patient_id && pt.biometrics_registered);
         }
-        p = enrolled[0];
+        if (!p && s?.patient_id) {
+          p = db.patients.find((pt: any) => pt.id === s.patient_id && pt.biometrics_registered);
+        }
+        if (!p) {
+          const registeredOnes = db.patients.filter((pt: any) => pt.biometrics_registered);
+          if (registeredOnes.length > 0) {
+            p = registeredOnes[registeredOnes.length - 1]; // Pick the latest enrolled patient
+          }
+        }
+        if (!p) {
+          throw new Error("Biometric Face Not Registered: No face template found for this user in database. Please enroll face in Patient Portal first.");
+        }
       }
 
       return createEmergencyUnlockResponse(db, p, body);
@@ -435,15 +448,20 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
 
     if (body.factor === "fingerprint") {
       const qHealthId = (body.health_id || "").trim();
-      if (!qHealthId) {
-        throw new Error("Patient Health ID is required for fingerprint biometric scan.");
+      let p: any = null;
+      if (qHealthId) {
+        p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase());
+      } else if (db.last_enrolled_patient_id) {
+        p = db.patients.find((pt: any) => pt.id === db.last_enrolled_patient_id);
+      } else if (s?.patient_id) {
+        p = db.patients.find((pt: any) => pt.id === s.patient_id);
       }
-      const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase());
+      
       if (!p) {
-        throw new Error(`Patient Not Registered: No patient found with Health ID "${qHealthId}" in database.`);
+        throw new Error("Fingerprint Biometric Not Registered: No matching patient found in database.");
       }
       if (!p.biometrics_registered) {
-        throw new Error(`Fingerprint Biometric Not Registered: Patient ${p.name} has not enrolled fingerprint biometrics in the database yet.`);
+        throw new Error(`Fingerprint Biometric Not Registered: Patient ${p.name} has not enrolled fingerprint biometrics yet.`);
       }
       return createEmergencyUnlockResponse(db, p, body);
     }

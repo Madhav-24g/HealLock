@@ -635,19 +635,19 @@ export default function HospitalHome() {
                     <div className="rounded-xl bg-[#FAF7F2] p-3">
                       <p className="text-[10px] font-bold uppercase text-[#858077]">CRITICAL ALLERGIES</p>
                       <p className="mt-1 text-xs font-bold text-[#C86D51]">
-                        {unlock.emergency_profile?.allergies?.join(", ") || "Penicillin"}
+                        {unlock.emergency_profile?.allergies?.join(", ") || "None Reported"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-[#FAF7F2] p-3">
                       <p className="text-[10px] font-bold uppercase text-[#858077]">CRITICAL MEDICATIONS</p>
                       <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                        {unlock.emergency_profile?.critical_meds?.join(", ") || "Warfarin 5mg"}
+                        {unlock.emergency_profile?.critical_meds?.join(", ") || "None Reported"}
                       </p>
                     </div>
                     <div className="rounded-xl bg-[#FAF7F2] p-3">
                       <p className="text-[10px] font-bold uppercase text-[#858077]">CONDITIONS</p>
                       <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                        {unlock.emergency_profile?.critical_conditions?.join(", ") || "Atrial Fibrillation"}
+                        {unlock.emergency_profile?.critical_conditions?.join(", ") || "General Registered Patient"}
                       </p>
                     </div>
                   </div>

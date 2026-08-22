@@ -369,25 +369,27 @@ export default function EmergencyTriage() {
                 <div className="rounded-2xl bg-[#FAF7F2] border border-[#E5E0D8] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#858077]">CRITICAL ALLERGIES</p>
                   <p className="mt-1 text-xs font-bold text-[#C86D51]">
-                    {unlockedData.emergency_profile?.allergies?.join(", ") || "Penicillin"}
+                    {unlockedData.emergency_profile?.allergies?.join(", ") || "None Reported"}
                   </p>
-                  <span className="text-[9px] text-rose-700 font-semibold uppercase">Severe Anaphylaxis</span>
+                  <span className="text-[9px] text-rose-700 font-semibold uppercase">
+                    {unlockedData.emergency_profile?.allergies?.length ? "Allergy Alert" : "No Known Allergies"}
+                  </span>
                 </div>
 
                 <div className="rounded-2xl bg-[#FAF7F2] border border-[#E5E0D8] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#858077]">CRITICAL MEDICATIONS</p>
                   <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                    {unlockedData.emergency_profile?.critical_meds?.join(", ") || "Warfarin 5mg"}
+                    {unlockedData.emergency_profile?.critical_meds?.join(", ") || "None Reported"}
                   </p>
-                  <span className="text-[9px] text-[#78736B]">Active Anticoagulant</span>
+                  <span className="text-[9px] text-[#78736B]">Active Regimen</span>
                 </div>
 
                 <div className="rounded-2xl bg-[#FAF7F2] border border-[#E5E0D8] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#858077]">CRITICAL CONDITIONS</p>
                   <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                    {unlockedData.emergency_profile?.critical_conditions?.join(", ") || "Atrial Fibrillation"}
+                    {unlockedData.emergency_profile?.critical_conditions?.join(", ") || "General Registered Patient"}
                   </p>
-                  <span className="text-[9px] text-[#78736B]">Cardiac Alert</span>
+                  <span className="text-[9px] text-[#78736B]">Clinical Status</span>
                 </div>
               </div>
             </div>

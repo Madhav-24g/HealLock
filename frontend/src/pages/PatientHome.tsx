@@ -506,30 +506,34 @@ export default function PatientHome() {
                   <div className="rounded-2xl bg-white p-3.5 shadow-2xs border border-[#F2EFEA]">
                     <p className="text-[10px] font-bold uppercase text-[#858077]">ALLERGIES</p>
                     <p className="mt-1 text-xs font-bold text-[#C86D51]">
-                      {me?.emergency_profile?.allergies?.join(", ") || "Penicillin"}
+                      {me?.emergency_profile?.allergies?.join(", ") || "None Reported"}
                     </p>
-                    <span className="text-[9px] text-rose-700 font-semibold uppercase">Severe Anaphylaxis</span>
+                    <span className="text-[9px] text-rose-700 font-semibold uppercase">
+                      {me?.emergency_profile?.allergies?.length ? "Allergy Alert" : "No Known Allergies"}
+                    </span>
                   </div>
 
                   <div className="rounded-2xl bg-white p-3.5 shadow-2xs border border-[#F2EFEA]">
                     <p className="text-[10px] font-bold uppercase text-[#858077]">CRITICAL MEDS</p>
                     <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                      {me?.emergency_profile?.critical_meds?.join(", ") || "Warfarin 5mg"}
+                      {me?.emergency_profile?.critical_meds?.join(", ") || "None Reported"}
                     </p>
-                    <span className="text-[9px] text-[#78736B]">Anticoagulant</span>
+                    <span className="text-[9px] text-[#78736B]">Active Regimen</span>
                   </div>
 
                   <div className="rounded-2xl bg-white p-3.5 shadow-2xs border border-[#F2EFEA]">
                     <p className="text-[10px] font-bold uppercase text-[#858077]">CONDITIONS</p>
                     <p className="mt-1 text-xs font-bold text-[#1E1B18]">
-                      {me?.emergency_profile?.critical_conditions?.join(", ") || "Atrial Fibrillation"}
+                      {me?.emergency_profile?.critical_conditions?.join(", ") || "General Registered Patient"}
                     </p>
-                    <span className="text-[9px] text-[#78736B]">Cardiac Alert</span>
+                    <span className="text-[9px] text-[#78736B]">Clinical Status</span>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-xl bg-white/70 px-4 py-2.5 text-xs text-[#78736B] border border-[#EEDAD5]">
-                  <span>Next of Kin: <b className="text-[#1E1B18]">Rohan Rao (Spouse)</b> • +91-90000-11111</span>
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/70 px-4 py-2.5 text-xs text-[#78736B] border border-[#EEDAD5]">
+                  <span>
+                    Next of Kin: <b className="text-[#1E1B18]">{me?.emergency_profile?.emergency_contacts?.[0]?.name || `${me?.name || "Registered User"} (Primary Contact)`}</b> • {me?.emergency_profile?.emergency_contacts?.[0]?.phone || "+91-90000-00000"}
+                  </span>
                   <div className="flex gap-3">
                     <button onClick={() => openBiometricModal("face")} className="font-semibold text-[#4A8B6E] hover:underline">
                       📸 Register Face ID
