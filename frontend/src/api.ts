@@ -1,4 +1,4 @@
-const API = "/api";
+const API = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
 export type Session = {
   token: string;
