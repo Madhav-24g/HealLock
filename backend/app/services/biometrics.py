@@ -4,9 +4,9 @@ import math
 import numpy as np
 from PIL import Image
 
-# Matching Threshold calibrated for pixel-intensity spatial embedding
-# (Not FaceNet — uses multi-scale spatial pooling; requires wider tolerance)
-EUCLIDEAN_MATCH_THRESHOLD = 0.82
+# Matching Threshold calibrated for 128-D spatial feature embedding
+# Strict threshold: Euclidean distance <= 0.48 ensures genuine matches while strictly rejecting unregistered individuals
+EUCLIDEAN_MATCH_THRESHOLD = 0.48
 
 
 def extract_128d_face_embedding(base64_image_str: str) -> dict | None:
@@ -39,20 +39,20 @@ def extract_128d_face_embedding(base64_image_str: str) -> dict | None:
         ))
         is_live_organic = grad_variance > 15.0
 
-        # Mean-variance normalization
-        std_val = float(np.std(arr))
-        if std_val > 1e-4:
-            norm_arr = (arr - float(np.mean(arr))) / std_val
-        else:
-            norm_arr = arr / 255.0
+        # Mean-centered anatomical normalization
+        arr_centered = arr - float(np.mean(arr))
 
         # Multi-scale 128-dimensional spatial feature pooling:
         # Layer 1: 8x8 spatial pooling with 4x4 sub-regions -> 64 dimensions
-        p1 = norm_arr.reshape(8, 8, 8, 8).mean(axis=(1, 3)).flatten()
+        p1 = arr_centered.reshape(8, 8, 8, 8).mean(axis=(1, 3)).flatten()
 
         # Layer 2: Gradient directional energy filters (horizontal & vertical edges) -> 64 dimensions
-        diff_h = np.abs(np.diff(norm_arr, axis=1, prepend=norm_arr[:, :1]))
-        diff_v = np.abs(np.diff(norm_arr, axis=0, prepend=norm_arr[:1, :]))
+        diff_h = np.diff(arr_centered, axis=1, prepend=arr_centered[:, :1])
+        diff_v = np.diff(arr_centered, axis=0, prepend=arr_centered[:1, :])
+
+        diff_h = diff_h - float(np.mean(diff_h))
+        diff_v = diff_v - float(np.mean(diff_v))
+
         g_h = diff_h.reshape(8, 8, 4, 16).mean(axis=(1, 3)).flatten()[:32]
         g_v = diff_v.reshape(8, 8, 4, 16).mean(axis=(1, 3)).flatten()[:32]
 
@@ -99,7 +99,6 @@ def extract_128d_multi_sample(base64_image_str: str) -> list[list[float]]:
                 arr = np.clip(arr * factor, 0, 255)
                 img_aug = Image.fromarray(arr.astype(np.uint8))
 
-                # Same pipeline as extract_128d_face_embedding
                 w, h = img_aug.size
                 min_dim = min(w, h)
                 left = (w - min_dim) // 2
@@ -108,12 +107,15 @@ def extract_128d_multi_sample(base64_image_str: str) -> list[list[float]]:
                 img_resized = img_cropped.resize((64, 64), Image.Resampling.BILINEAR)
 
                 a = np.array(img_resized, dtype=np.float32)
-                std_val = float(np.std(a))
-                norm_arr = (a - float(np.mean(a))) / std_val if std_val > 1e-4 else a / 255.0
+                arr_c = a - float(np.mean(a))
 
-                p1 = norm_arr.reshape(8, 8, 8, 8).mean(axis=(1, 3)).flatten()
-                diff_h = np.abs(np.diff(norm_arr, axis=1, prepend=norm_arr[:, :1]))
-                diff_v = np.abs(np.diff(norm_arr, axis=0, prepend=norm_arr[:1, :]))
+                p1 = arr_c.reshape(8, 8, 8, 8).mean(axis=(1, 3)).flatten()
+                diff_h = np.diff(arr_c, axis=1, prepend=arr_c[:, :1])
+                diff_v = np.diff(arr_c, axis=0, prepend=arr_c[:1, :])
+
+                diff_h = diff_h - float(np.mean(diff_h))
+                diff_v = diff_v - float(np.mean(diff_v))
+
                 g_h = diff_h.reshape(8, 8, 4, 16).mean(axis=(1, 3)).flatten()[:32]
                 g_v = diff_v.reshape(8, 8, 4, 16).mean(axis=(1, 3)).flatten()[:32]
 

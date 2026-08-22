@@ -91,10 +91,9 @@ def unlock_emergency(
             patient = best_match
             confidence_pct = calculate_confidence_score(best_dist)
         else:
-            matched_str = f"{best_dist:.3f}" if best_dist < 999 else "N/A"
             raise HTTPException(
                 status_code=404,
-                detail=f"Biometric Face Not Matched: No registered patient found within match threshold ({matched_str} vs <= {EUCLIDEAN_MATCH_THRESHOLD}). Please re-enroll biometrics or use QR/Fingerprint factor."
+                detail="Incorrect / Not Registered: No matching enrolled profile found in database. Access Denied."
             )
 
     elif body.factor == "fingerprint":

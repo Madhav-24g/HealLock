@@ -166,9 +166,26 @@ export default function HospitalHome() {
     setErr("");
 
     try {
-      const body: any = { factor, reason, biometric_match: true };
+      let imageData: string | null = null;
+      if (factor === "face" && videoRef.current) {
+        try {
+          const video = videoRef.current;
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth || 320;
+          canvas.height = video.videoHeight || 240;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            imageData = canvas.toDataURL("image/jpeg", 0.85);
+          }
+        } catch (e) {
+          console.warn("Sensor canvas snapshot fallback:", e);
+        }
+      }
+
+      const body: any = { factor, reason, biometric_match: true, image_data: imageData };
       if (factor === "qr") body.qr_token = qr;
-      else body.health_id = healthId;
+      else if (healthId.trim()) body.health_id = healthId.trim();
 
       const res = await api("/emergency/unlock", { method: "POST", body: JSON.stringify(body) });
       setUnlock(res);

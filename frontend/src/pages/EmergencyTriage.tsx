@@ -340,11 +340,11 @@ export default function EmergencyTriage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-[#E2ECE5] px-3 py-1 text-xs font-bold text-[#2D5A46] inline-flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> 128-D FaceNet Verified: {unlockedData.factor_used?.toUpperCase()}
+                      <CheckCircle2 className="h-3.5 w-3.5" /> 128-D Biometric Match: {unlockedData.factor_used?.toUpperCase()}
                     </span>
                     {unlockedData.euclidean_distance !== null && unlockedData.euclidean_distance !== undefined && (
                       <span className="rounded-full bg-[#FAF7F2] border border-[#E5E0D8] px-2.5 py-1 text-[11px] font-mono font-bold text-[#1E1B18]">
-                        L₂ Distance: d = {unlockedData.euclidean_distance} (Threshold ≤ 0.58)
+                        L₂ Distance: d = {unlockedData.euclidean_distance} (Threshold ≤ 0.48)
                       </span>
                     )}
                     {unlockedData.biometric_confidence && (
