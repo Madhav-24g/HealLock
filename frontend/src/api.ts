@@ -49,7 +49,7 @@ function getMockDB() {
         dob: "1992-04-15",
         health_id: "HL-ASHA-1001",
         qr_token: "QR-ASHA-EMERGENCY",
-        biometrics_registered: true,
+        biometrics_registered: false,
         emergency_profile: {
           blood_group: "O+",
           allergies: ["Penicillin", "Sulfa drugs"],

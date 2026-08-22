@@ -27,6 +27,7 @@ export default function EmergencyTriage() {
   const nav = useNavigate();
   const [factor, setFactor] = useState<"qr" | "face" | "fingerprint">("face");
   const [qrToken, setQrToken] = useState("");
+  const [healthId, setHealthId] = useState("");
   const [reason, setReason] = useState("Unconscious");
   const [isScanning, setIsScanning] = useState(false);
   const [unlockedData, setUnlockedData] = useState<any>(null);
@@ -102,6 +103,7 @@ export default function EmergencyTriage() {
         reason,
         image_data: imageData,
         qr_token: factor === "qr" ? qrToken : undefined,
+        health_id: healthId.trim() || undefined,
         biometric_match: true,
       };
 
@@ -279,17 +281,22 @@ export default function EmergencyTriage() {
                   </label>
                   <input
                     className="w-full rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-2.5 text-xs font-mono text-[#1E1B18]"
-                    placeholder="e.g. QR-ASHA-EMERGENCY"
+                    placeholder="e.g. QR-MADHAV-1003"
                     value={qrToken}
                     onChange={(e) => setQrToken(e.target.value)}
                   />
                 </div>
               ) : (
-                <div className="rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-3">
-                  <p className="text-[10px] font-bold uppercase text-[#858077]">BIOMETRIC MATCH MODE</p>
-                  <p className="text-xs font-bold text-[#1E1B18] mt-0.5 flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-[#4A8B6E]" /> Autonomous Facial Landmark Recognition
-                  </p>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-[#858077] mb-1">
+                    TARGET HEALTH ID (OPTIONAL)
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-[#E5E0D8] bg-[#FAF7F2] p-2.5 text-xs font-mono text-[#1E1B18]"
+                    placeholder="Leave empty for auto-scan or enter HL-..."
+                    value={healthId}
+                    onChange={(e) => setHealthId(e.target.value)}
+                  />
                 </div>
               )}
 
