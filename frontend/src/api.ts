@@ -22,11 +22,17 @@ export function setSession(s: Session | null) {
   else localStorage.setItem("heallock", JSON.stringify(s));
 }
 
-// ---------------------------------------------------------------------------
-// Standalone Client-Side Database
-// ---------------------------------------------------------------------------
+const DB_KEY = "heallock_db_v5";
+
+// Auto-purge outdated legacy local storage if present
+try {
+  localStorage.removeItem("heallock_mock_db");
+  localStorage.removeItem("heallock_mock_db_v1");
+  localStorage.removeItem("heallock_mock_db_v2");
+} catch {}
+
 function getMockDB() {
-  const stored = localStorage.getItem("heallock_mock_db");
+  const stored = localStorage.getItem(DB_KEY);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -168,12 +174,12 @@ function getMockDB() {
     ]
   };
 
-  localStorage.setItem("heallock_mock_db", JSON.stringify(initialDB));
+  localStorage.setItem(DB_KEY, JSON.stringify(initialDB));
   return initialDB;
 }
 
 function saveMockDB(db: any) {
-  localStorage.setItem("heallock_mock_db", JSON.stringify(db));
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
 }
 
 // ---------------------------------------------------------------------------
@@ -425,21 +431,15 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
           throw new Error(`Biometric Face Not Registered: Patient ${p.name} (${p.health_id}) has not enrolled face biometrics in the database yet. Access Denied.`);
         }
       } else {
-        // Find the patient who enrolled biometrics or active registered user
-        if (db.last_enrolled_patient_id) {
+        // Must match currently active registered patient with enrolled biometrics
+        if (s?.patient_id) {
+          p = db.patients.find((pt: any) => pt.id === s.patient_id && pt.biometrics_registered);
+        } else if (db.last_enrolled_patient_id) {
           p = db.patients.find((pt: any) => pt.id === db.last_enrolled_patient_id && pt.biometrics_registered);
         }
-        if (!p && s?.patient_id) {
-          p = db.patients.find((pt: any) => pt.id === s.patient_id && pt.biometrics_registered);
-        }
+
         if (!p) {
-          const registeredOnes = db.patients.filter((pt: any) => pt.biometrics_registered);
-          if (registeredOnes.length > 0) {
-            p = registeredOnes[registeredOnes.length - 1]; // Pick the latest enrolled patient
-          }
-        }
-        if (!p) {
-          throw new Error("Biometric Face Not Registered: No face template found for this user in database. Please enroll face in Patient Portal first.");
+          throw new Error("Incorrect / Not Registered: Biometric face is not registered in the database. Access Denied.");
         }
       }
 
