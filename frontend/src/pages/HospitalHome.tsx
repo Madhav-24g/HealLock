@@ -41,28 +41,27 @@ export default function HospitalHome() {
   const session = getSession();
   const role = session?.role;
   const [me, setMe] = useState<any>(null);
-  const [healthId, setHealthId] = useState("HL-ASHA-1001");
+  const [healthId, setHealthId] = useState("");
   const [patient, setPatient] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [records, setRecords] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [flags, setFlags] = useState<any[]>([]);
-  const [meds, setMeds] = useState("ibuprofen, warfarin");
+  const [meds, setMeds] = useState("");
   const [unlock, setUnlock] = useState<any>(null);
-  const [qr, setQr] = useState("QR-ASHA-EMERGENCY");
+  const [qr, setQr] = useState("");
   const [reason, setReason] = useState("Unconscious");
   const [factor, setFactor] = useState<"qr" | "face" | "fingerprint">("face");
   const [alerts, setAlerts] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [chainBlocks, setChainBlocks] = useState<any[]>([]);
   const [err, setErr] = useState("");
-  const [docText, setDocText] = useState("Diagnosis: AFib\nMedication: warfarin 5mg\nINR: 2.4\nBlood Pressure: 138/88 mmHg");
+  const [docText, setDocText] = useState("");
   const [dispensingId, setDispensingId] = useState<number | null>(null);
-
   const [insights, setInsights] = useState<any>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [showRxModal, setShowRxModal] = useState(false);
-  const [rxNotes, setRxNotes] = useState("Warfarin 5mg once daily in evening\nMetformin 500mg BD with meals");
+  const [rxNotes, setRxNotes] = useState("");
 
   // Sensor & Camera States
   const [showSensorModal, setShowSensorModal] = useState(false);
@@ -195,19 +194,26 @@ export default function HospitalHome() {
   async function lookup() {
     setErr("");
     setInsights(null);
+    if (!healthId.trim()) {
+      setErr("Please enter a valid Patient Health ID (e.g. HL-NAME-1001).");
+      setPatient(null);
+      setRecords([]);
+      setPrescriptions([]);
+      return;
+    }
     try {
-      const p = await api(`/hospital/patients/lookup?health_id=${encodeURIComponent(healthId)}`);
+      const p = await api(`/hospital/patients/lookup?health_id=${encodeURIComponent(healthId.trim())}`);
       setPatient(p);
       if (role === "doctor" || role === "pharmacist") {
         try {
           const recs = await api(`/records/patient/${p.id}`);
-          setRecords(recs);
+          setRecords(recs || []);
         } catch {
           setRecords([]);
         }
         try {
           const rxList = await api(`/prescriptions/patient/${p.id}`);
-          setPrescriptions(rxList);
+          setPrescriptions(rxList || []);
         } catch {
           setPrescriptions([]);
         }
@@ -223,7 +229,11 @@ export default function HospitalHome() {
         }
       }
     } catch (e: any) {
-      setErr(e.message);
+      setPatient(null);
+      setRecords([]);
+      setPrescriptions([]);
+      setInsights(null);
+      setErr(e.message || `Patient lookup failed: No record found for "${healthId}".`);
     }
   }
 

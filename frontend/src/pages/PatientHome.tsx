@@ -554,13 +554,21 @@ export default function PatientHome() {
 
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-[#F2EFEA] bg-[#FAF7F2] p-3.5">
-                    <p className="text-xs font-bold text-[#1E1B18]">INR / Coagulation Lab</p>
-                    <p className="text-[11px] text-[#78736B] mt-0.5">Due in 3 days for Warfarin therapeutic range tracking.</p>
+                    <p className="text-xs font-bold text-[#1E1B18]">Preventive Health Review</p>
+                    <p className="text-[11px] text-[#78736B] mt-0.5">
+                      {me?.emergency_profile?.critical_meds?.[0] !== "None"
+                        ? `Follow-up on ${me?.emergency_profile?.critical_meds?.join(", ") || "prescribed regimens"} with primary care.`
+                        : "Annual routine wellness checkup and preventive laboratory screening recommended."}
+                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-[#F2EFEA] bg-[#FAF7F2] p-3.5">
-                    <p className="text-xs font-bold text-[#1E1B18]">Cardiology Follow-Up</p>
-                    <p className="text-[11px] text-[#78736B] mt-0.5">Scheduled with Dr. Shah on Aug 28, 2026.</p>
+                    <p className="text-xs font-bold text-[#1E1B18]">Biometric Security Status</p>
+                    <p className="text-[11px] text-[#78736B] mt-0.5">
+                      {me?.biometrics_registered
+                        ? "Single-factor emergency biometric key is enrolled and active."
+                        : "Biometrics not enrolled. Click 'Enroll Biometrics' to enable 1-second crisis triage unlock."}
+                    </p>
                   </div>
                 </div>
               </div>
