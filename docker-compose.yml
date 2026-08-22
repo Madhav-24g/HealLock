@@ -1,0 +1,20 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/heallock.db
+    volumes:
+      - heallock-data:/data
+    working_dir: /app
+
+  web:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  heallock-data:

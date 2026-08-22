@@ -1,0 +1,14 @@
+heallock.db
+__pycache__/
+.venv/
+node_modules/
+dist/
+.env
+backend/.env
+frontend/.env
+*.pyc
+.DS_Store
+*.log
+HealLock.zip
+*.zip
+.vercel
