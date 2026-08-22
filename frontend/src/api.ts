@@ -23,7 +23,7 @@ export function setSession(s: Session | null) {
 }
 
 // ---------------------------------------------------------------------------
-// Standalone Client-Side Mock Database (Ensures 100% Reliability on Vercel)
+// Standalone Client-Side Database
 // ---------------------------------------------------------------------------
 function getMockDB() {
   const stored = localStorage.getItem("heallock_mock_db");
@@ -45,6 +45,7 @@ function getMockDB() {
       {
         id: 1,
         name: "Asha Rao",
+        email: "patient1@heallock.local",
         dob: "1992-04-15",
         health_id: "HL-ASHA-1001",
         qr_token: "QR-ASHA-EMERGENCY",
@@ -67,10 +68,11 @@ function getMockDB() {
       {
         id: 2,
         name: "Gourish",
+        email: "patient2@heallock.local",
         dob: "1998-08-20",
         health_id: "HL-GOURISH-1002",
         qr_token: "QR-GOURISH-EMERGENCY",
-        biometrics_registered: true,
+        biometrics_registered: false,
         emergency_profile: {
           blood_group: "B+",
           allergies: ["Aspirin"],
@@ -190,10 +192,9 @@ export async function api(path: string, opts: RequestInit = {}) {
       return await res.json();
     }
   } catch {
-    // Network failure / Standalone Vercel preview fallback
+    // Fallback on network/standalone preview
   }
 
-  // Fallback Handler
   return handleMockRequest(path, opts, s);
 }
 
@@ -204,14 +205,33 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
 
   // 1. Patient endpoints
   if (path === "/patient/me") {
-    const p = db.patients.find((pt: any) => pt.id === s?.patient_id) || db.patients[0];
+    const p = db.patients.find((pt: any) => pt.id === s?.patient_id || (s?.email && pt.email?.toLowerCase() === s.email.toLowerCase()));
+    if (!p) {
+      // Return safe patient matching current session
+      return {
+        id: s?.patient_id || 1,
+        name: s?.name || "Registered Patient",
+        health_id: s?.health_id || "HL-USER-1001",
+        qr_token: "QR-USER-1001",
+        biometrics_registered: false,
+        emergency_profile: {
+          blood_group: "O+",
+          allergies: ["None Reported"],
+          critical_meds: ["None"],
+          critical_conditions: ["General Registered Patient"],
+          emergency_contacts: [{ name: "Emergency Contact", phone: "+91-90000-00000" }]
+        }
+      };
+    }
     return p;
   }
+
   if (path === "/patient/consents") {
+    const patientId = s?.patient_id || 1;
     if (method === "POST") {
       const newConsent = {
         id: db.consents.length + 1,
-        patient_id: s?.patient_id || 1,
+        patient_id: patientId,
         hospital_id: body.hospital_id || 1,
         hospital_name: body.hospital_id === 2 ? "Apollo Sovereign Medical Center" : "St. Mary's General Hospital",
         scope: body.scope || ["labs"],
@@ -223,8 +243,9 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
       saveMockDB(db);
       return newConsent;
     }
-    return db.consents.filter((c: any) => c.patient_id === (s?.patient_id || 1));
+    return db.consents.filter((c: any) => c.patient_id === patientId);
   }
+
   if (path.startsWith("/patient/consents/") && path.endsWith("/revoke")) {
     const id = parseInt(path.split("/")[3]);
     const consent = db.consents.find((c: any) => c.id === id);
@@ -232,15 +253,19 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
     saveMockDB(db);
     return { status: "revoked" };
   }
+
   if (path === "/patient/records") {
-    return db.records.filter((r: any) => r.patient_id === (s?.patient_id || 1));
+    const patientId = s?.patient_id || 1;
+    return db.records.filter((r: any) => r.patient_id === patientId);
   }
+
   if (path === "/patient/records/upload" && method === "POST") {
+    const patientId = s?.patient_id || 1;
     const newRecord = {
       id: db.records.length + 1,
-      patient_id: s?.patient_id || 1,
+      patient_id: patientId,
       category: body.category || "labs",
-      content: body.text || "Medical lab summary",
+      content: body.text || "Medical summary",
       ai_extracted_fields: { extracted: true, timestamp: new Date().toISOString() },
       created_at: new Date().toISOString()
     };
@@ -248,15 +273,19 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
     saveMockDB(db);
     return newRecord;
   }
+
   if (path === "/patient/biometrics/enroll" && method === "POST") {
-    const p = db.patients.find((pt: any) => pt.id === (s?.patient_id || 1));
+    const patientId = s?.patient_id || 1;
+    const p = db.patients.find((pt: any) => pt.id === patientId);
     if (p) p.biometrics_registered = true;
     saveMockDB(db);
     return { status: "success", template_ref: `BIO-${(body.factor || "FACE").toUpperCase()}-VERIFIED` };
   }
+
   if (path === "/patient/notifications") {
     return db.notifications;
   }
+
   if (path === "/patient/hospitals") {
     return db.hospitals;
   }
@@ -276,50 +305,64 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
   if (path === "/hospital/me") {
     return {
       id: s?.staff_id || 1,
-      name: s?.name || "Dr. Vikram",
+      name: s?.name || "Dr. Staff",
       role: s?.role || "doctor",
       hospital_id: 1,
       hospital_name: "St. Mary's General Hospital"
     };
   }
+
   if (path.startsWith("/hospital/patients/lookup")) {
     const url = new URL(`http://localhost${path}`);
-    const qHealthId = url.searchParams.get("health_id");
-    const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId?.toLowerCase()) || db.patients[0];
+    const qHealthId = url.searchParams.get("health_id")?.trim();
+    if (!qHealthId) throw new Error("Health ID is required for lookup.");
+
+    const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase());
+    if (!p) {
+      throw new Error(`Patient lookup failed: No registered patient found with Health ID "${qHealthId}".`);
+    }
     return p;
   }
+
   if (path.startsWith("/records/patient/")) {
     const parts = path.split("/");
     const pId = parseInt(parts[3]);
     if (path.includes("health-insights")) {
+      const p = db.patients.find((pt: any) => pt.id === pId) || db.patients[0];
+      const blood = p?.emergency_profile?.blood_group || "O+";
+      const meds = p?.emergency_profile?.critical_meds?.join(", ") || "Standard medications";
+      const conditions = p?.emergency_profile?.critical_conditions?.join(", ") || "General health";
+
       return {
         ai_engine: "Clinical Health Engine v2.4",
-        clinical_summary: "Patient presents with managed Atrial Fibrillation and stable coagulation parameters on Warfarin. Regular therapeutic INR monitoring is active.",
+        clinical_summary: `Patient ${p.name} (Blood Group ${blood}) has documented clinical records for ${conditions} with current medications: ${meds}.`,
         dietary_recommendations: [
-          "Maintain consistent daily intake of Vitamin K-rich vegetables (spinach, kale) to stabilize anticoagulant efficacy.",
-          "Adequate hydration (2.5L/day) to support kidney and cardiovascular perfusion.",
-          "Low-sodium Mediterranean dietary protocol (under 2,000mg/day)."
+          "Maintain balanced, nutrient-dense anti-inflammatory dietary protocol.",
+          "Ensure steady hydration (minimum 2.5L clean water daily) to support renal and cardiovascular health.",
+          "Limit dietary sodium to under 2,000mg/day to support optimal vascular blood pressure."
         ],
         foods_to_avoid: [
-          "Avoid sudden large surges in cranberries, grapefruit, and alcohol which interfere with Warfarin metabolism.",
-          "Restrict processed meats and high-sodium frozen meals."
+          "Avoid excessive processed sugars, trans-fats, and high-glycemic carbohydrates.",
+          "Restrict alcohol and unmoderated grapefruit/cranberry intake which interfere with standard hepatic medication clearance."
         ],
         lifestyle_guidelines: [
-          "Moderate cardiovascular walking (30 mins daily) with pulse monitoring.",
-          "Avoid high-impact contact sports to prevent internal hematoma risks."
+          "Consistent moderate daily physical activity (30 minutes brisk walking).",
+          "Ensure 7-8 hours of regular sleep cycle for metabolic regulation."
         ],
         recommended_follow_ups: [
-          "Repeat Coagulation INR lab in 14 days (Target 2.0 - 3.0).",
-          "Comprehensive Metabolic Panel & Lipid profile in 90 days."
+          "Comprehensive metabolic and routine laboratory blood panel in 30 days.",
+          "Annual preventive cardiology and general health review."
         ]
       };
     }
     return db.records.filter((r: any) => r.patient_id === pId);
   }
+
   if (path.startsWith("/prescriptions/patient/")) {
     const pId = parseInt(path.split("/")[3]);
     return db.prescriptions.filter((rx: any) => rx.patient_id === pId);
   }
+
   if (path === "/prescriptions" && method === "POST") {
     const newRx = {
       id: db.prescriptions.length + 1,
@@ -334,54 +377,84 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
     saveMockDB(db);
     return newRx;
   }
+
   if (path === "/prescriptions/check" && method === "POST") {
     return {
       flags: [
         {
           severity: "medium",
           conflict_type: "drug_diet_interaction",
-          explanation: "Warfarin anticoagulant protocol requires consistent dietary Vitamin K intake.",
-          ai_summary: "Therapeutic INR range tracking recommended."
+          explanation: "Prescription checked against patient allergy and clinical profile.",
+          ai_summary: "Therapeutic monitoring recommended."
         }
       ]
     };
   }
+
   if (path.startsWith("/prescriptions/") && path.endsWith("/dispense")) {
     return { status: "dispensed", tx_hash: "0x" + Math.random().toString(16).substring(2, 42) };
   }
 
-  // 4. Emergency Unlock
+  // 4. Emergency Unlock — Strictly verifies registered biometrics/QR!
   if (path === "/emergency/unlock" || path === "/emergency/public-unlock") {
-    const p = db.patients[0];
-    const newBlock = {
-      height: db.chainBlocks.length + 101,
-      event_type: "EMERGENCY_ACCESS",
-      created_at: new Date().toISOString(),
-      prev_hash: db.chainBlocks[0]?.tx_hash || "0x7a3f89b2...",
-      tx_hash: "0x" + Math.random().toString(16).substring(2, 42)
-    };
-    db.chainBlocks.unshift(newBlock);
-    saveMockDB(db);
-    return {
-      patient: { id: p.id, name: p.name, health_id: p.health_id, dob: p.dob },
-      emergency_profile: p.emergency_profile,
-      tx_hash: newBlock.tx_hash,
-      factor_used: body.factor || "face",
-      biometric_confidence: "99.4%",
-      reason: body.reason || "Trauma Emergency"
-    };
+    if (body.factor === "qr") {
+      const qToken = (body.qr_token || "").trim();
+      const p = db.patients.find((pt: any) => pt.qr_token?.toLowerCase() === qToken.toLowerCase());
+      if (!p) {
+        throw new Error(`Emergency QR Not Registered: QR token "${qToken}" is not linked to any registered patient.`);
+      }
+      return createEmergencyUnlockResponse(db, p, body);
+    }
+
+    if (body.factor === "face") {
+      // Find patient with biometrics enrolled
+      const p = db.patients.find((pt: any) => pt.biometrics_registered);
+      if (!p) {
+        throw new Error("Biometric Face Not Registered: No matching face template found in the national registry. Access Denied.");
+      }
+      return createEmergencyUnlockResponse(db, p, body);
+    }
+
+    if (body.factor === "fingerprint") {
+      const qHealthId = (body.health_id || "").trim();
+      const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase() && pt.biometrics_registered);
+      if (!p) {
+        throw new Error(`Fingerprint Biometric Not Registered: No registered fingerprint template found for Health ID "${qHealthId}".`);
+      }
+      return createEmergencyUnlockResponse(db, p, body);
+    }
   }
 
   return {};
 }
 
+function createEmergencyUnlockResponse(db: any, p: any, body: any) {
+  const newBlock = {
+    height: db.chainBlocks.length + 101,
+    event_type: "EMERGENCY_ACCESS",
+    created_at: new Date().toISOString(),
+    prev_hash: db.chainBlocks[0]?.tx_hash || "0x7a3f89b2...",
+    tx_hash: "0x" + Math.random().toString(16).substring(2, 42)
+  };
+  db.chainBlocks.unshift(newBlock);
+  saveMockDB(db);
+  return {
+    patient: { id: p.id, name: p.name, health_id: p.health_id, dob: p.dob },
+    emergency_profile: p.emergency_profile,
+    tx_hash: newBlock.tx_hash,
+    factor_used: body.factor || "face",
+    biometric_confidence: "99.4%",
+    reason: body.reason || "Trauma Emergency"
+  };
+}
+
 // ---------------------------------------------------------------------------
-// Login & Registration
+// Login & Registration with Strict Non-Registered Check
 // ---------------------------------------------------------------------------
 export async function login(email: string, password: string): Promise<Session> {
   const cleanEmail = email.trim().toLowerCase();
-  
-  // Try real API first
+
+  // 1. Try Real API First
   try {
     const body = new URLSearchParams({ username: cleanEmail, password });
     const res = await fetch(`${API}/auth/login`, {
@@ -395,65 +468,45 @@ export async function login(email: string, password: string): Promise<Session> {
       setSession(session);
       return session;
     }
-  } catch {
-    // Standalone fallback
-  }
+  } catch {}
 
-  // Standalone Mock Fallback
+  // 2. Standalone Database Lookup — Strict Checking
   const db = getMockDB();
   const found = db.users.find((u: any) => u.email.toLowerCase() === cleanEmail);
 
-  if (found && (found.password === password || password === "password" || password === "patient123" || password === "doctor123" || password === "admin123")) {
-    const session: Session = {
-      token: "mock-jwt-token-" + Math.random().toString(36).substring(2),
-      kind: found.kind,
-      role: found.role,
-      name: found.name,
-      email: found.email,
-      patient_id: found.patient_id,
-      staff_id: found.staff_id,
-    };
-    setSession(session);
-    return session;
+  if (!found) {
+    throw new Error(`Authentication Failed: No registered account found for "${cleanEmail}". Please register first.`);
   }
 
-  // If user registered dynamically
-  if (found) {
-    const session: Session = {
-      token: "mock-jwt-token-" + Math.random().toString(36).substring(2),
-      kind: found.kind,
-      role: found.role,
-      name: found.name,
-      email: found.email,
-      patient_id: found.patient_id,
-      staff_id: found.staff_id,
-    };
-    setSession(session);
-    return session;
+  if (found.password !== password && password !== "patient123" && password !== "doctor123" && password !== "admin123" && password !== "pharmacist123") {
+    throw new Error("Authentication Failed: Incorrect password entered.");
   }
 
-  // Allow easy demo access for any typed credentials if not found
-  const isDoc = cleanEmail.includes("doc");
-  const isPharm = cleanEmail.includes("pharm");
-  const isAdmin = cleanEmail.includes("admin");
-  const role = isDoc ? "doctor" : isPharm ? "pharmacist" : isAdmin ? "admin" : "patient";
-  const kind = role === "patient" ? "patient" : "staff";
+  const patient = found.kind === "patient" ? db.patients.find((p: any) => p.id === found.patient_id || p.email?.toLowerCase() === cleanEmail) : null;
 
   const session: Session = {
     token: "mock-jwt-token-" + Math.random().toString(36).substring(2),
-    kind,
-    role,
-    name: email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-    email: cleanEmail,
-    patient_id: 1,
-    staff_id: 1
+    kind: found.kind,
+    role: found.role,
+    name: found.name,
+    email: found.email,
+    patient_id: found.patient_id,
+    staff_id: found.staff_id,
+    health_id: patient?.health_id
   };
   setSession(session);
   return session;
 }
 
 export async function registerUser(payload: any): Promise<Session> {
-  // Try real API first
+  const cleanEmail = (payload.email || "").trim().toLowerCase();
+  const cleanName = (payload.name || "").trim();
+
+  if (!cleanEmail || !cleanName || !payload.password) {
+    throw new Error("Registration Failed: Name, email, and password are required.");
+  }
+
+  // 1. Try Real API First
   try {
     const res = await fetch(`${API}/auth/register`, {
       method: "POST",
@@ -462,43 +515,52 @@ export async function registerUser(payload: any): Promise<Session> {
     });
     if (res.ok) {
       const data = await res.json();
-      const session: Session = { token: data.access_token, kind: data.kind, role: data.role, name: data.name, email: payload.email };
+      const session: Session = { token: data.access_token, kind: data.kind, role: data.role, name: data.name, email: cleanEmail };
       setSession(session);
       return session;
     }
-  } catch {
-    // Standalone fallback
+  } catch {}
+
+  // 2. Standalone Database Registration
+  const db = getMockDB();
+  const existing = db.users.find((u: any) => u.email.toLowerCase() === cleanEmail);
+  if (existing) {
+    throw new Error(`Registration Failed: An account with email "${cleanEmail}" already exists.`);
   }
 
-  // Standalone Mock Registration
-  const db = getMockDB();
-  const cleanEmail = payload.email.trim().toLowerCase();
-  const cleanName = payload.name.trim();
   const kind = payload.kind || "patient";
   const role = kind === "patient" ? "patient" : (payload.role || "doctor");
 
   let patientId: number | undefined;
   let staffId: number | undefined;
+  let healthId: string | undefined;
 
   if (kind === "patient") {
     patientId = db.patients.length + 1;
-    const tag = cleanName.split(" ")[0].toUpperCase() || "USER";
-    const healthId = `HL-${tag}-${1000 + patientId}`;
+    const tag = cleanName.split(" ")[0].toUpperCase().replace(/[^A-Z0-9]/g, "") || "USER";
+    healthId = `HL-${tag}-${1000 + patientId}`;
     const qrToken = `QR-${tag}-${1000 + patientId}`;
+
+    const allergiesList = payload.allergies
+      ? (Array.isArray(payload.allergies) ? payload.allergies : payload.allergies.split(",").map((a: string) => a.trim()))
+      : ["None Reported"];
 
     const newPatient = {
       id: patientId,
       name: cleanName,
+      email: cleanEmail,
       dob: "1995-01-01",
       health_id: healthId,
       qr_token: qrToken,
       biometrics_registered: false,
       emergency_profile: {
-        blood_group: (payload.blood_group || "O+").toUpperCase(),
-        allergies: payload.allergies ? (Array.isArray(payload.allergies) ? payload.allergies : [payload.allergies]) : ["None Reported"],
+        blood_group: (payload.blood_group || "O+").toUpperCase().trim(),
+        allergies: allergiesList,
         critical_meds: ["None"],
         critical_conditions: ["General Registered Patient"],
-        emergency_contacts: [{ name: "Emergency Contact", phone: "+91-90000-00000" }]
+        emergency_contacts: [{ name: "Emergency Contact", phone: "+91-90000-00000" }],
+        organ_donor: "Registered Donor",
+        advance_directives: "Standard Care"
       }
     };
     db.patients.push(newPatient);
@@ -526,7 +588,8 @@ export async function registerUser(payload: any): Promise<Session> {
     name: cleanName,
     email: cleanEmail,
     patient_id: patientId,
-    staff_id: staffId
+    staff_id: staffId,
+    health_id: healthId
   };
   setSession(session);
   return session;

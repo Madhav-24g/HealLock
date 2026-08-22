@@ -39,7 +39,8 @@ import {
   Camera,
   Bell,
   User,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from "lucide-react";
 
 export default function PatientHome() {
@@ -52,6 +53,7 @@ export default function PatientHome() {
   const [hospitals, setHospitals] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "consents" | "audit" | "nutrition">("dashboard");
   const [err, setErr] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Consent Grant Modal State
   const [showGrantModal, setShowGrantModal] = useState(false);
@@ -274,15 +276,49 @@ export default function PatientHome() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-gray-900 antialiased">
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="fixed bottom-0 top-0 z-20 flex w-64 flex-col bg-white border-r border-gray-100 shadow-sm">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 pt-5 pb-4 border-b border-gray-100">
+    <div className="flex min-h-screen bg-gray-50 text-gray-900 antialiased flex-col lg:flex-row">
+      {/* MOBILE TOP NAVBAR */}
+      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
             <Shield className="h-4 w-4" />
           </div>
           <span className="font-bold text-base text-gray-900 tracking-tight">HealLock</span>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+          aria-label="Toggle navigation menu"
+        >
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* MOBILE BACKDROP */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-xs transition-opacity"
+        />
+      )}
+
+      {/* SIDEBAR NAVIGATION */}
+      <aside
+        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col bg-white border-r border-gray-100 shadow-xl lg:shadow-sm transition-transform duration-300 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        {/* Logo */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+              <Shield className="h-4 w-4" />
+            </div>
+            <span className="font-bold text-base text-gray-900 tracking-tight">HealLock</span>
+          </div>
+          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden p-1 text-gray-400 hover:text-gray-700">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Profile */}
@@ -305,35 +341,40 @@ export default function PatientHome() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
           {/* Dashboard */}
-          <button onClick={() => setActiveTab("dashboard")}
+          <button
+            onClick={() => { setActiveTab("dashboard"); setMobileMenuOpen(false); }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${ activeTab==="dashboard" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium" }`}>
             <LayoutDashboard className={`h-4 w-4 flex-shrink-0 ${ activeTab==="dashboard" ? "text-indigo-600" : "text-gray-400" }`} />
             Dashboard
           </button>
 
           {/* My Records */}
-          <button onClick={() => setActiveTab("records")}
+          <button
+            onClick={() => { setActiveTab("records"); setMobileMenuOpen(false); }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${ activeTab==="records" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium" }`}>
             <FolderKanban className={`h-4 w-4 flex-shrink-0 ${ activeTab==="records" ? "text-indigo-600" : "text-gray-400" }`} />
             My Records
           </button>
 
           {/* My Consents */}
-          <button onClick={() => setActiveTab("consents")}
+          <button
+            onClick={() => { setActiveTab("consents"); setMobileMenuOpen(false); }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${ activeTab==="consents" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium" }`}>
             <ShieldCheck className={`h-4 w-4 flex-shrink-0 ${ activeTab==="consents" ? "text-indigo-600" : "text-gray-400" }`} />
             My Consents
           </button>
 
           {/* Access Timeline */}
-          <button onClick={() => setActiveTab("audit")}
+          <button
+            onClick={() => { setActiveTab("audit"); setMobileMenuOpen(false); }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${ activeTab==="audit" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium" }`}>
             <Clock className={`h-4 w-4 flex-shrink-0 ${ activeTab==="audit" ? "text-indigo-600" : "text-gray-400" }`} />
             Access Timeline
           </button>
 
           {/* AI Health Insights */}
-          <button onClick={() => setActiveTab("nutrition")}
+          <button
+            onClick={() => { setActiveTab("nutrition"); setMobileMenuOpen(false); }}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${ activeTab==="nutrition" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium" }`}>
             <Sparkles className={`h-4 w-4 flex-shrink-0 ${ activeTab==="nutrition" ? "text-indigo-600" : "text-gray-400" }`} />
             AI Health Insights
@@ -352,7 +393,7 @@ export default function PatientHome() {
 
           {/* Emergency Access */}
           <button
-            onClick={() => openBiometricModal("face")}
+            onClick={() => { openBiometricModal("face"); setMobileMenuOpen(false); }}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-rose-50 hover:text-rose-700 transition-all group"
           >
             <ShieldAlert className="h-4 w-4 flex-shrink-0 text-rose-400 group-hover:text-rose-600" />
@@ -397,29 +438,29 @@ export default function PatientHome() {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="ml-64 flex-1 px-8 py-7">
+      <main className="flex-1 lg:ml-64 px-4 sm:px-6 lg:px-8 py-6 w-full max-w-7xl mx-auto">
         {/* Header Bar */}
-        <header className="flex items-center justify-between pb-6 border-b border-gray-200">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-gray-200 gap-4">
           <div>
-            <h2 className="font-semibold text-2xl tracking-tight text-gray-900">
-              Good Morning, {me?.name?.split(" ")[0] || "Asha"} 👋
+            <h2 className="font-semibold text-xl sm:text-2xl tracking-tight text-gray-900">
+              Good Morning, {me?.name?.split(" ")[0] || "Patient"} 👋
             </h2>
-            <p className="mt-0.5 text-sm text-gray-500">
+            <p className="mt-0.5 text-xs sm:text-sm text-gray-500">
               Your health data is encrypted end-to-end. All access is recorded on-chain.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => setShowQrModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 transition-colors"
             >
               <QrCode className="h-4 w-4 text-indigo-500" /> Emergency QR
             </button>
 
             <button
               onClick={() => openBiometricModal("face")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
               {me?.biometrics_registered ? "Biometrics Enrolled ✓" : "Enroll Biometrics"}

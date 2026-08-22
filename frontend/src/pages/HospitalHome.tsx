@@ -32,7 +32,8 @@ import {
   CreditCard,
   CheckSquare,
   History,
-  Download
+  Download,
+  Menu
 } from "lucide-react";
 
 export default function HospitalHome() {
@@ -42,6 +43,7 @@ export default function HospitalHome() {
   const [me, setMe] = useState<any>(null);
   const [healthId, setHealthId] = useState("HL-ASHA-1001");
   const [patient, setPatient] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [records, setRecords] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [flags, setFlags] = useState<any[]>([]);
@@ -314,19 +316,53 @@ export default function HospitalHome() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F7F4EF] text-[#1E1B18] antialiased">
+    <div className="flex min-h-screen bg-[#F7F4EF] text-[#1E1B18] antialiased flex-col lg:flex-row">
+      {/* MOBILE TOP NAVBAR */}
+      <div className="lg:hidden flex items-center justify-between bg-[#EFECE6] border-b border-[#E5E0D8] px-4 py-3 sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#C86D51]/15 text-[#C86D51]">
+            <Building2 className="h-4 w-4" />
+          </div>
+          <span className="font-serif font-bold text-base text-[#1E1B18] tracking-tight">HealLock Clinician</span>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-xl border border-[#E5E0D8] bg-white text-[#1E1B18] hover:bg-gray-50"
+          aria-label="Toggle clinician navigation"
+        >
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* MOBILE BACKDROP */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-xs transition-opacity"
+        />
+      )}
+
       {/* LEFT SIDEBAR */}
-      <aside className="fixed bottom-0 top-0 z-20 flex w-64 flex-col justify-between border-r border-[#E5E0D8] bg-[#EFECE6] px-4 py-6">
+      <aside
+        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col justify-between border-r border-[#E5E0D8] bg-[#EFECE6] px-4 py-6 shadow-xl lg:shadow-none transition-transform duration-300 ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
         <div>
           {/* Logo Header */}
-          <div className="flex items-center gap-3 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C86D51]/15 text-[#C86D51]">
-              <Building2 className="h-5 w-5" />
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C86D51]/15 text-[#C86D51]">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="font-serif text-xl font-bold leading-tight tracking-tight text-[#1E1B18]">HealLock</h1>
+                <p className="text-[9px] font-semibold tracking-wider uppercase text-[#78736B]">CLINICIAN PORTAL</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-serif text-xl font-bold leading-tight tracking-tight text-[#1E1B18]">HealLock</h1>
-              <p className="text-[9px] font-semibold tracking-wider uppercase text-[#78736B]">CLINICIAN PORTAL</p>
-            </div>
+            <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden p-1 text-gray-400 hover:text-gray-700">
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="mt-6 rounded-2xl border border-[#E5E0D8] bg-white p-4 text-xs shadow-xs">
@@ -342,7 +378,7 @@ export default function HospitalHome() {
           {/* Quick First Responder Link */}
           <div className="mt-4">
             <button
-              onClick={() => nav("/emergency")}
+              onClick={() => { nav("/emergency"); setMobileMenuOpen(false); }}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#C86D51] py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#B0583D] transition-colors"
             >
               🚨 Open Crisis Triage View
@@ -382,10 +418,10 @@ export default function HospitalHome() {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="ml-64 flex-1 px-8 py-7">
-        <header className="flex items-center justify-between pb-6 border-b border-[#E5E0D8] mb-6">
+      <main className="flex-1 lg:ml-64 px-4 sm:px-6 lg:px-8 py-6 w-full max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#E5E0D8] mb-6 gap-4">
           <div>
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-[#1E1B18]">
+            <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#1E1B18]">
               {role === "emergency" && "🚨 Emergency Response Console"}
               {role === "doctor" && "👨‍⚕️ Clinical Decision Support & Rx Safety"}
               {role === "pharmacist" && "💊 Pharmacy Dispensation & Rx Validation"}
@@ -396,7 +432,7 @@ export default function HospitalHome() {
               Role: <b className="uppercase text-[#C86D51]">{role}</b> • Minimum Necessary Access principle enforced on every request.
             </p>
           </div>
-          <span className="rounded-full bg-[#E2ECE5] px-3 py-1 text-xs font-bold text-[#2D5A46] uppercase tracking-wide">
+          <span className="self-start sm:self-auto rounded-full bg-[#E2ECE5] px-3 py-1 text-xs font-bold text-[#2D5A46] uppercase tracking-wide">
             {me?.hospital?.name || "St. Mary's General"}
           </span>
         </header>
