@@ -399,27 +399,51 @@ function handleMockRequest(path: string, opts: RequestInit, s: Session | null): 
   if (path === "/emergency/unlock" || path === "/emergency/public-unlock") {
     if (body.factor === "qr") {
       const qToken = (body.qr_token || "").trim();
+      if (!qToken) {
+        throw new Error("Emergency QR Token is required.");
+      }
       const p = db.patients.find((pt: any) => pt.qr_token?.toLowerCase() === qToken.toLowerCase());
       if (!p) {
-        throw new Error(`Emergency QR Not Registered: QR token "${qToken}" is not linked to any registered patient.`);
+        throw new Error(`Emergency QR Not Registered: QR token "${qToken}" is not registered in the database. Access Denied.`);
       }
       return createEmergencyUnlockResponse(db, p, body);
     }
 
     if (body.factor === "face") {
-      // Find patient with biometrics enrolled
-      const p = db.patients.find((pt: any) => pt.biometrics_registered);
-      if (!p) {
-        throw new Error("Biometric Face Not Registered: No matching face template found in the national registry. Access Denied.");
+      const qHealthId = (body.health_id || "").trim();
+      let p: any = null;
+
+      if (qHealthId) {
+        p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase());
+        if (!p) {
+          throw new Error(`Patient Not Registered: No patient found with Health ID "${qHealthId}" in database. Access Denied.`);
+        }
+        if (!p.biometrics_registered) {
+          throw new Error(`Biometric Face Not Registered: Patient ${p.name} (${p.health_id}) has not enrolled face biometrics in the database yet. Access Denied.`);
+        }
+      } else {
+        // Find enrolled patient in database
+        const enrolled = db.patients.filter((pt: any) => pt.biometrics_registered);
+        if (enrolled.length === 0) {
+          throw new Error("Biometric Face Not Registered: No registered patient with enrolled face biometrics found in database. Access Denied.");
+        }
+        p = enrolled[0];
       }
+
       return createEmergencyUnlockResponse(db, p, body);
     }
 
     if (body.factor === "fingerprint") {
       const qHealthId = (body.health_id || "").trim();
-      const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase() && pt.biometrics_registered);
+      if (!qHealthId) {
+        throw new Error("Patient Health ID is required for fingerprint biometric scan.");
+      }
+      const p = db.patients.find((pt: any) => pt.health_id?.toLowerCase() === qHealthId.toLowerCase());
       if (!p) {
-        throw new Error(`Fingerprint Biometric Not Registered: No registered fingerprint template found for Health ID "${qHealthId}".`);
+        throw new Error(`Patient Not Registered: No patient found with Health ID "${qHealthId}" in database.`);
+      }
+      if (!p.biometrics_registered) {
+        throw new Error(`Fingerprint Biometric Not Registered: Patient ${p.name} has not enrolled fingerprint biometrics in the database yet.`);
       }
       return createEmergencyUnlockResponse(db, p, body);
     }
